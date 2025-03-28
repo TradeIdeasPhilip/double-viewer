@@ -129,12 +129,19 @@ class DoubleViewer {
   readonly #top = document.createElement("div");
   #makeToggle(bitIndex: number) {
     const digitElement = document.createElement("span");
-    digitElement.addEventListener("pointerdown", () => {
+    const toggleBit = () => {
       const bits = [...this.bits];
       const oldBit = bits[bitIndex];
       const newBit = oldBit == "0" ? "1" : "0";
       bits[bitIndex] = newBit;
       this.bits = bits.join("");
+    };
+    digitElement.addEventListener("pointerdown", toggleBit);
+    digitElement.addEventListener("keypress", (event) => {
+      if (event.key == " " || event.key == "Enter") {
+        toggleBit();
+        event.stopPropagation();
+      }
     });
     digitElement.dataset.digit = bitIndex.toString();
     digitElement.tabIndex = 0;
@@ -307,6 +314,7 @@ class DoubleViewer {
       setValueDiv.append(button, " ");
     }
     setValueDiv.appendChild(this.#input);
+    this.#input.value = "2";
 
     const moreButtonsDiv = document.createElement("div");
     {
@@ -384,32 +392,111 @@ class DoubleViewer {
        * If `exponent` == `FAR_RIGHT` draw `"."` immediately after `mantissaBits`.
        */
       const FAR_RIGHT = 1075;
-      if (exponent >= FAR_LEFT && exponent <= FAR_RIGHT) {
+      if (exponent == DoubleViewer.EXPONENT_COUNT - 1) {
+        this.#decimalPointDiv.innerText = "Infinity or NaN";
+      } else {
         this.#decimalPointDiv.appendChild(this.#decimalPointSign).innerText =
           this.bits[0] == "0" ? "+" : "-";
-        this.#impliedMantissaDigit.innerText = "1";
-        const allMantissaBits = "1" + mantissaBits;
-        const fromLeft = exponent - FAR_LEFT;
-        let trailingZerosStartAfter = NaN;
-        this.#completeMantissa.forEach((span, index) => {
-          const bit = allMantissaBits[index];
-          this.#decimalPointDiv.appendChild(span).innerText = bit;
-          if (bit == "1") {
-            trailingZerosStartAfter = index;
-          }
-          // decide which digits are trailing zeros.
-          if (index == fromLeft) {
+        if (exponent == 0) {
+          const allMantissaBits = "0" + mantissaBits;
+          this.#impliedMantissaDigit.innerText = "0";
+          // de-normal
+          // draw a black 0
+          //this.#decimalPointDiv.append("0");
+          appendFromHTML(
+            this.#decimalPointDiv,
+            '<span data-digit="x">0</span>'
+          );
+          // draw the red .
+          this.#decimalPointDiv.appendChild(this.#decimalPoint);
+          // draw "0…0" in black.
+          //this.#decimalPointDiv.append("0…0");
+          appendFromHTML(
+            this.#decimalPointDiv,
+            '<span data-digit="x">0…0</span>'
+          );
+          // Draw 0 in red. And draw the green mantissa.
+          this.#completeMantissa.forEach((span, index) => {
+            const bit = allMantissaBits[index];
+            this.#decimalPointDiv.appendChild(span).innerText = bit;
+            span.style.fontWeight = "";
+          });
+        } else {
+          const allMantissaBits = "1" + mantissaBits;
+          this.#impliedMantissaDigit.innerText = "1";
+          if (exponent > FAR_RIGHT) {
+            const howFarPast = exponent - FAR_RIGHT;
+            // Draw 1 in red. And draw the green mantissa.
+            this.#completeMantissa.forEach((span, index) => {
+              const bit = allMantissaBits[index];
+              this.#decimalPointDiv.appendChild(span).innerText = bit;
+              span.style.fontWeight = "";
+            });
+            //  draw ?, ??, ???, or ?…?
+            const placeholders =
+              //            howFarPast > 3 ? "?…?" : "?".repeat(howFarPast);
+              howFarPast > 3 ? "0…0" : "0".repeat(howFarPast);
+            appendFromHTML(
+              this.#decimalPointDiv,
+              `<span data-digit="x">${placeholders}</span>`
+            );
+            // draw the red period.
             this.#decimalPointDiv.appendChild(this.#decimalPoint);
-            trailingZerosStartAfter = index;
+          } else if (exponent >= FAR_LEFT) {
+            const fromLeft = exponent - FAR_LEFT;
+            let trailingZerosStartAfter = NaN;
+            this.#completeMantissa.forEach((span, index) => {
+              const bit = allMantissaBits[index];
+              this.#decimalPointDiv.appendChild(span).innerText = bit;
+              if (bit == "1") {
+                trailingZerosStartAfter = index;
+              }
+              if (index == fromLeft) {
+                this.#decimalPointDiv.appendChild(this.#decimalPoint);
+                trailingZerosStartAfter = index;
+              }
+            });
+            assertFinite(trailingZerosStartAfter);
+            this.#completeMantissa.forEach((span, index) => {
+              const isTrailingZero = index > trailingZerosStartAfter;
+              const weight = isTrailingZero ? "100" : "";
+              span.style.fontWeight = weight;
+            });
+          } else {
+            const howFarPast = FAR_LEFT - exponent;
+            // draw a black 0
+            appendFromHTML(
+              this.#decimalPointDiv,
+              '<span data-digit="x">0</span>'
+            );
+            // draw the red .
+            this.#decimalPointDiv.appendChild(this.#decimalPoint);
+            // draw (howFarPast-1) black zeros
+            // or "0…0" if howFarPast >3
+            const leadingZeros =
+              howFarPast > 3 ? "0…0" : "0".repeat(howFarPast - 1);
+            appendFromHTML(
+              this.#decimalPointDiv,
+              `<span data-digit="x">${leadingZeros}</span>`
+            );
+            // Draw 1 in red. And draw the green mantissa.
+            let trailingZerosStartAfter = NaN;
+            this.#completeMantissa.forEach((span, index) => {
+              const bit = allMantissaBits[index];
+              this.#decimalPointDiv.appendChild(span).innerText = bit;
+              if (bit == "1") {
+                trailingZerosStartAfter = index;
+              }
+              span.style.fontWeight = "";
+            });
+            assertFinite(trailingZerosStartAfter);
+            this.#completeMantissa.forEach((span, index) => {
+              const isTrailingZero = index > trailingZerosStartAfter;
+              const weight = isTrailingZero ? "100" : "";
+              span.style.fontWeight = weight;
+            });
           }
-        });
-        assertFinite(trailingZerosStartAfter);
-        this.#completeMantissa.forEach((span, index) => {
-          const isTrailingZero = index > trailingZerosStartAfter;
-          const weight = isTrailingZero ? "100" : "";
-          span.style.fontWeight = weight;
-        });
-        console.log("trailingZerosStartAfter", trailingZerosStartAfter);
+        }
       }
     }
   }
