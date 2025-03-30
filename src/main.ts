@@ -124,6 +124,24 @@ class DoubleViewer {
     const result = dataView.getFloat64(0, littleEndian);
     return result;
   }
+  /**
+   * Convert the number into a 32 bit floating point number,
+   * and then back to a 64 bit floating point number.
+   * @param x 
+   * @returns 
+   */
+  static toFloat(x: number) {
+    this.#dataView.setFloat32(0, x);
+    return this.#dataView.getFloat32(0);
+  }
+  /*
+  static toFloat16(x: number) {
+    // This does not work on chrome.
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView/setFloat16
+    this.#dataView.setFloat16(0, x);
+    return this.#dataView.getFloat16(0);
+  }
+  */  
   #value: number;
   #bits: string;
   readonly #top = document.createElement("div");
@@ -219,7 +237,8 @@ class DoubleViewer {
   constructor(initialValue = 0) {
     this.#value = initialValue;
     this.#bits = DoubleViewer.toBinary(initialValue);
-    this.#decimalPoint.classList.add("exponent", "fixed-width");
+    this.#decimalPoint.classList.add("exponent");
+    this.#decimalPoint.dataset["digit"] = "x";
     this.#decimalPoint.innerText = ".";
     const leftSide = (event: MouseEvent) => {
       const { left, width } = this.#decimalPoint.getBoundingClientRect();
@@ -242,7 +261,8 @@ class DoubleViewer {
       }
     });
     this.#decimalPointDiv.style.wordBreak = "break-all";
-    this.#impliedMantissaDigit.classList.add("fixed-width", "exponent");
+    this.#impliedMantissaDigit.classList.add("exponent");
+    this.#impliedMantissaDigit.dataset["digit"] = "x";
     const digitHolder = document.createElement("div");
     digitHolder.style.wordBreak = "break-all";
     digitHolder.append(...this.#digits);
@@ -272,8 +292,11 @@ class DoubleViewer {
     );
     exponentPlusOneButton.addEventListener("click", () => this.exponent++);
     exponentMinusOneButton.addEventListener("click", () => this.exponent--);
-
-    const setValueDiv = document.createElement("div");
+    /**
+     * The user can `<input>` a number, and then apply `=`, `+=`, etc from the buttons.
+     * JavaScript calls these [assignment operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators#assignment_operators).
+     */
+    const assignmentOperatorsDiv = document.createElement("div");
     {
       const getValue = () => {
         return parseFloatX(this.#input.value) ?? NaN;
@@ -283,107 +306,133 @@ class DoubleViewer {
       button.addEventListener("click", () => {
         this.value = getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "+=";
       button.addEventListener("click", () => {
         this.value += getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "-=";
       button.addEventListener("click", () => {
         this.value -= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "*=";
       button.addEventListener("click", () => {
         this.value *= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "/=";
       button.addEventListener("click", () => {
         this.value /= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "%=";
       button.addEventListener("click", () => {
         this.value %= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "^=";
       button.addEventListener("click", () => {
         this.value ^= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "&=";
       button.addEventListener("click", () => {
         this.value &= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "|=";
       button.addEventListener("click", () => {
         this.value |= getValue();
       });
-      setValueDiv.append(button, " ");
+      assignmentOperatorsDiv.append(button, " ");
     }
-    setValueDiv.appendChild(this.#input);
+    assignmentOperatorsDiv.appendChild(this.#input);
     this.#input.value = "2";
-
-    const moreButtonsDiv = document.createElement("div");
+    /**
+     * These buttons set the value to -Infinity, Number.MAX_SAFE_INTEGER, etc.
+     */
+    const setSpecificValuesDiv = document.createElement("div");
     {
       let button = document.createElement("button");
       button.innerText = "NaN";
       button.addEventListener("click", () => (this.value = NaN));
-      moreButtonsDiv.append("= ", button);
+      setSpecificValuesDiv.append("= ", button);
       button = document.createElement("button");
       button.innerText = "-Infinity";
       button.addEventListener("click", () => (this.value = -Infinity));
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
       button = document.createElement("button");
       button.innerText = "Min Safe Integer";
       button.addEventListener(
         "click",
         () => (this.value = Number.MIN_SAFE_INTEGER)
       );
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
       button = document.createElement("button");
       button.innerText = "Min Value";
       button.addEventListener("click", () => (this.value = Number.MIN_VALUE));
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
       button = document.createElement("button");
       button.innerText = "Epsilon";
       button.addEventListener("click", () => (this.value = Number.EPSILON));
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
       button = document.createElement("button");
       button.innerText = "Max Safe Integer";
       button.addEventListener(
         "click",
         () => (this.value = Number.MAX_SAFE_INTEGER)
       );
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
       button = document.createElement("button");
       button.innerText = "Max Value";
       button.addEventListener("click", () => (this.value = Number.MAX_VALUE));
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
       button = document.createElement("button");
       button.innerText = "Infinity";
       button.addEventListener("click", () => (this.value = Infinity));
-      moreButtonsDiv.append(" ", button);
+      setSpecificValuesDiv.append(" ", button);
     }
-
-    this.#top.appendChild(digitHolder);
+    /**
+     * 1/x, convert to float32
+     */
+    const moreMutatorsDiv = document.createElement("div");
+    {
+      moreMutatorsDiv.style.display="flex";
+      moreMutatorsDiv.style.gap="0.25em";
+      moreMutatorsDiv.style.padding="0.25em 0"
+      const reciprocalButton = appendFromHTML1(
+        moreMutatorsDiv,
+        "<button>1/x</button>",
+        HTMLButtonElement
+      );      
+      reciprocalButton.addEventListener(
+        "click",
+        () => (this.value = 1 / this.value)
+      );
+      const float32Button= appendFromHTML1(
+        moreMutatorsDiv,
+        "<button>32 Bits</button>",
+        HTMLButtonElement
+      );
+      float32Button.addEventListener("click", ()=>{this.value=DoubleViewer.toFloat(this.value)})
+    }
     this.#top.appendChild(valueDiv);
+    this.#top.appendChild(digitHolder);
     this.#top.appendChild(exponentDiv);
     this.#top.appendChild(this.#decimalPointDiv);
-    this.#top.appendChild(setValueDiv);
-    this.#top.appendChild(moreButtonsDiv);
+    this.#top.appendChild(assignmentOperatorsDiv);
+    this.#top.appendChild(setSpecificValuesDiv);
+    this.#top.appendChild(moreMutatorsDiv);
     this.#top.classList.add("top");
     this.#updateGUI();
   }
@@ -393,7 +442,7 @@ class DoubleViewer {
     }
     /**
      * Convert the input to a string.
-     * If reasonabl
+     * Add commas if the number is not in scientific notation.
      * @param x Convert this to a string.
      * @returns The number as a string.
      */
@@ -573,7 +622,7 @@ class DoubleViewer {
 
 (window as any).DoubleViewer = DoubleViewer;
 
-const doubleViewer = new DoubleViewer(7);
+const doubleViewer = new DoubleViewer(3.5);
 getById("main", HTMLHeadingElement).insertAdjacentElement(
   "afterend",
   doubleViewer.top
