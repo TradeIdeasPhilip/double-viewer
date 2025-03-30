@@ -143,6 +143,7 @@ class DoubleViewer {
         event.stopPropagation();
       }
     });
+    digitElement.style.cursor = "pointer";
     digitElement.dataset.digit = bitIndex.toString();
     digitElement.tabIndex = 0;
     return digitElement;
@@ -220,6 +221,26 @@ class DoubleViewer {
     this.#bits = DoubleViewer.toBinary(initialValue);
     this.#decimalPoint.classList.add("exponent", "fixed-width");
     this.#decimalPoint.innerText = ".";
+    const leftSide = (event: MouseEvent) => {
+      const { left, width } = this.#decimalPoint.getBoundingClientRect();
+      const x = event.clientX;
+      return x < left + width / 2;
+    };
+    const updateCursor = (event: MouseEvent) => {
+      this.#decimalPoint.style.cursor = leftSide(event)
+        ? "w-resize"
+        : "e-resize";
+    };
+    this.#decimalPoint.addEventListener("mouseenter", updateCursor);
+    this.#decimalPoint.addEventListener("mouseleave", updateCursor);
+    this.#decimalPoint.addEventListener("mousemove", updateCursor);
+    this.#decimalPoint.addEventListener("click", (event) => {
+      if (leftSide(event)) {
+        this.exponent--;
+      } else {
+        this.exponent++;
+      }
+    });
     this.#decimalPointDiv.style.wordBreak = "break-all";
     this.#impliedMantissaDigit.classList.add("fixed-width", "exponent");
     const digitHolder = document.createElement("div");
@@ -230,7 +251,6 @@ class DoubleViewer {
       "Value:" + NON_BREAKING_SPACE + NON_BREAKING_SPACE,
       this.#asString
     );
-    this.#asString.classList.add("bits-as-string");
     const exponentDiv = document.createElement("div");
     exponentDiv.classList.add("exponent");
     exponentDiv.style.display = "flex";
@@ -371,7 +391,21 @@ class DoubleViewer {
     for (const [bit, element] of zip(this.bits, this.#digits)) {
       element.innerText = bit;
     }
-    this.#asString.innerText = this.value.toString();
+    /**
+     * Convert the input to a string.
+     * If reasonabl
+     * @param x Convert this to a string.
+     * @returns The number as a string.
+     */
+    function commaFriendly(x: number) {
+      if (Math.abs(x) <= Number.MAX_SAFE_INTEGER) {
+        // Adds commas and prevents scientific notation.
+        return x.toLocaleString();
+      } else {
+        return x.toExponential();
+      }
+    }
+    this.#asString.innerText = commaFriendly(this.value);
     const exponentBits = this.exponentBits;
     if (exponentBits.length != 11) {
       throw new Error("wtf");
