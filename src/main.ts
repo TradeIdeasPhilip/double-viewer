@@ -182,6 +182,10 @@ class DoubleViewer {
   readonly #decimalPoint = document.createElement("span");
   readonly #input = document.createElement("input");
 
+  get inputElement() {
+    return this.#input;
+  }
+
   /**
    * A string of 0's and 1's representing the exponent of the current number.
    */
@@ -233,6 +237,13 @@ class DoubleViewer {
     }
     newValue = positiveModulo(newValue, DoubleViewer.EXPONENT_COUNT);
     this.exponentBits = newValue.toString(2).padStart(11, "0");
+  }
+  /**
+   * Read from the input element and try to interpret the result as a number.
+   * This is the value that the `=`, `+=`, `-=`, etc buttons use.
+   */
+  get inputValue() {
+    return parseFloatX(this.#input.value) ?? NaN;
   }
   constructor(initialValue = 0) {
     this.#value = initialValue;
@@ -298,61 +309,58 @@ class DoubleViewer {
      */
     const assignmentOperatorsDiv = document.createElement("div");
     {
-      const getValue = () => {
-        return parseFloatX(this.#input.value) ?? NaN;
-      };
       let button = document.createElement("button");
       button.innerText = "=";
       button.addEventListener("click", () => {
-        this.value = getValue();
+        this.value = this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "+=";
       button.addEventListener("click", () => {
-        this.value += getValue();
+        this.value += this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "-=";
       button.addEventListener("click", () => {
-        this.value -= getValue();
+        this.value -= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "*=";
       button.addEventListener("click", () => {
-        this.value *= getValue();
+        this.value *= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "/=";
       button.addEventListener("click", () => {
-        this.value /= getValue();
+        this.value /= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "%=";
       button.addEventListener("click", () => {
-        this.value %= getValue();
+        this.value %= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "^=";
       button.addEventListener("click", () => {
-        this.value ^= getValue();
+        this.value ^= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "&=";
       button.addEventListener("click", () => {
-        this.value &= getValue();
+        this.value &= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
       button = document.createElement("button");
       button.innerText = "|=";
       button.addEventListener("click", () => {
-        this.value |= getValue();
+        this.value |= this.inputValue;
       });
       assignmentOperatorsDiv.append(button, " ");
     }
@@ -632,3 +640,20 @@ getById("main", HTMLHeadingElement).insertAdjacentElement(
   "afterend",
   doubleViewer.top
 );
+
+const numberStarter = new Set("+-.1234567890");
+
+window.addEventListener("keypress", (event) => {
+  if (
+    numberStarter.has(event.key) &&
+    document.activeElement != doubleViewer.inputElement
+  ) {
+    doubleViewer.inputElement.focus();
+    doubleViewer.inputElement.select();
+  }
+});
+doubleViewer.inputElement.addEventListener("keypress", (event) => {
+  if (event.key == "Enter") {
+    doubleViewer.value = doubleViewer.inputValue;
+  }
+});
