@@ -105,14 +105,17 @@ class DoubleViewer {
     );
     return bytes.join(separator);
   }
+  static bitsAreValid(s: string) {
+    return /^[01]{64}$/.test(s);
+  }
+  /**
+   *
+   * @param s A string of bits.  Should be 64 characters long, all 0's and 1's.
+   * @returns `undefined` if the input is invalid.
+   */
   static fromBinary(s: string) {
-    if (s.length != 64) {
+    if (!this.bitsAreValid(s)) {
       return undefined;
-    }
-    for (const c of s) {
-      if (c != "0" && c != "1") {
-        return undefined;
-      }
     }
     const dataView = DoubleViewer.#dataView;
     for (let byteNumber = 0; byteNumber < 8; byteNumber++) {
@@ -606,7 +609,12 @@ class DoubleViewer {
     this.#value = newValue;
     this.#bits = DoubleViewer.toBinary(newValue);
     this.#updateGUI();
+    this.valueChanged?.();
   }
+  /**
+   * This is called each time the value changes.
+   */
+  valueChanged: undefined | (() => void);
   /**
    * The bits used to store this number.
    * This is always a string of 64 0's and 1's.
@@ -657,3 +665,16 @@ doubleViewer.inputElement.addEventListener("keypress", (event) => {
     doubleViewer.value = doubleViewer.inputValue;
   }
 });
+doubleViewer.valueChanged = () => {
+  location.hash = doubleViewer.bits;
+};
+function checkHash() {
+  const hash = location.hash.substring(1);
+  if (DoubleViewer.bitsAreValid(hash)) {
+    if (doubleViewer.bits != hash) {
+      doubleViewer.bits = hash;
+    }
+  }
+}
+checkHash();
+addEventListener("hashchange", checkHash);
