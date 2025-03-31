@@ -127,8 +127,8 @@ class DoubleViewer {
   /**
    * Convert the number into a 32 bit floating point number,
    * and then back to a 64 bit floating point number.
-   * @param x 
-   * @returns 
+   * @param x
+   * @returns
    */
   static toFloat(x: number) {
     this.#dataView.setFloat32(0, x);
@@ -141,7 +141,7 @@ class DoubleViewer {
     this.#dataView.setFloat16(0, x);
     return this.#dataView.getFloat16(0);
   }
-  */  
+  */
   #value: number;
   #bits: string;
   readonly #top = document.createElement("div");
@@ -407,24 +407,26 @@ class DoubleViewer {
      */
     const moreMutatorsDiv = document.createElement("div");
     {
-      moreMutatorsDiv.style.display="flex";
-      moreMutatorsDiv.style.gap="0.25em";
-      moreMutatorsDiv.style.padding="0.25em 0"
+      moreMutatorsDiv.style.display = "flex";
+      moreMutatorsDiv.style.gap = "0.25em";
+      moreMutatorsDiv.style.padding = "0.25em 0";
       const reciprocalButton = appendFromHTML1(
         moreMutatorsDiv,
         "<button>1/x</button>",
         HTMLButtonElement
-      );      
+      );
       reciprocalButton.addEventListener(
         "click",
         () => (this.value = 1 / this.value)
       );
-      const float32Button= appendFromHTML1(
+      const float32Button = appendFromHTML1(
         moreMutatorsDiv,
         "<button>32 Bits</button>",
         HTMLButtonElement
       );
-      float32Button.addEventListener("click", ()=>{this.value=DoubleViewer.toFloat(this.value)})
+      float32Button.addEventListener("click", () => {
+        this.value = DoubleViewer.toFloat(this.value);
+      });
     }
     this.#top.appendChild(valueDiv);
     this.#top.appendChild(digitHolder);
@@ -447,8 +449,11 @@ class DoubleViewer {
      * @returns The number as a string.
      */
     function commaFriendly(x: number) {
+      return x.toString();
       if (Math.abs(x) <= Number.MAX_SAFE_INTEGER) {
         // Adds commas and prevents scientific notation.
+        // However, that makes it limit precision to three digits after the decimal.
+        // I tried to adjust that, but that caused other problems.
         return x.toLocaleString();
       } else {
         return x.toExponential();
