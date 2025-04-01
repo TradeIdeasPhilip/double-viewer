@@ -159,7 +159,12 @@ class DoubleViewer {
     };
     digitElement.addEventListener("pointerdown", toggleBit);
     digitElement.addEventListener("keypress", (event) => {
-      if (event.key == " " || event.key == "Enter") {
+      // Originally I allowed space or enter to toggle the bit,
+      // just like a normal button works.
+      // However, space causes the page to scroll down, in addition to
+      // toggling the bit.
+      // event.stopPropagation() does not help.
+      if (/*event.key == " " || */ event.key == "Enter") {
         toggleBit();
         event.stopPropagation();
       }
@@ -482,6 +487,14 @@ class DoubleViewer {
       if (mantissaBits.length != 64 - 11 - 1) {
         throw new Error("wtf");
       }
+      // This works, but it causes a problem.
+      // By starting fresh each time we clear the focus
+      // and the selection of any text.
+      // The focus is my bigger concern.
+      // You should be able to tab and hit enter on this line,
+      // just like on the top line, but it moves the focus
+      // each time the number changes.
+      // TODO fix the focus!!!!
       this.#decimalPointDiv.innerText = "";
       /**
        * If `exponent` == `FAR_LEFT` draw `"1."` immediately before `mantissaBits`.
@@ -656,15 +669,27 @@ window.addEventListener("keypress", (event) => {
     numberStarter.has(event.key) &&
     document.activeElement != doubleViewer.inputElement
   ) {
+    // If a user starts typing a number and we aren't already in the input box,
+    // move to the input box.
     doubleViewer.inputElement.focus();
+    // And select whatever was already in there.
+    // So what the user types will REPLACE what was already in there.
     doubleViewer.inputElement.select();
   }
 });
 doubleViewer.inputElement.addEventListener("keypress", (event) => {
   if (event.key == "Enter") {
+    // If the user hits enter in the input box it's like hitting
+    // the "=" button to display the number from the input box.
     doubleViewer.value = doubleViewer.inputValue;
+    // The select the text.
+    // So what the user types next will REPLACE what was just displayed.
+    doubleViewer.inputElement.select();
   }
 });
+
+// Copy the bits to and from the url's hash.
+// So it will be easy to save and share your current sate.
 doubleViewer.valueChanged = () => {
   location.hash = doubleViewer.bits;
 };
